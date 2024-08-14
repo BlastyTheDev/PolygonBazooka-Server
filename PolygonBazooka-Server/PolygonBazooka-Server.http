@@ -1,0 +1,6 @@
+@PolygonBazooka_Server_HostAddress = http://localhost:5022
+
+GET {{PolygonBazooka_Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
