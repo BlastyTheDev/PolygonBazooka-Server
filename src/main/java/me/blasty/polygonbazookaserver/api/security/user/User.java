@@ -33,6 +33,10 @@ public class User implements UserDetails {
     private Date created;
     @Column(nullable = false, name = "time_played")
     private Long timePlayed;
+    
+    private double glicko;
+    private double rd;
+    private double volatility;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

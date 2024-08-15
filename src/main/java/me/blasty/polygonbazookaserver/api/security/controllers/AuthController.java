@@ -10,10 +10,8 @@ import me.blasty.polygonbazookaserver.api.security.user.User;
 import me.blasty.polygonbazookaserver.api.security.user.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.Date;
 
@@ -25,13 +23,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final AuthenticationManager authManager;
     private final JWTService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public void login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
         authManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         var user = userRepository.findByUsername(loginRequest.getUsername()).orElseThrow();
         var jwt = jwtService.createToken(user);
-        response.addCookie(new Cookie("token", jwt));
+        var tokenCookie = new Cookie("token", jwt);
+        tokenCookie.setAttribute("SameSite", "Strict");
+        response.addCookie(tokenCookie);
     }
 
     @PostMapping("/register")
@@ -48,7 +49,7 @@ public class AuthController {
 
         var user = User.builder()
                 .username(registerRequest.getUsername())
-                .password(registerRequest.getPassword())
+                .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .email(registerRequest.getEmail())
                 .created(new Date(System.currentTimeMillis()))
                 .timePlayed(0L)
@@ -57,7 +58,10 @@ public class AuthController {
         userRepository.save(user);
 
         response.setStatus(HttpServletResponse.SC_CREATED);
-        response.addCookie(new Cookie("token", jwtService.createToken(user)));
+        
+        var tokenCookie = new Cookie("token", jwtService.createToken(user));
+        tokenCookie.setAttribute("SameSite", "Strict");
+        response.addCookie(tokenCookie);
     }
 
 }
