@@ -23,8 +23,8 @@ public class JWTService {
     }
 
     public String createToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        // expire in 30 days (last number in multiplication is number of days in the future)
-        Date expiration = new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 30);
+        // expire in 100 years (doesnt expire)
+        Date expiration = new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 36525);
         return Jwts.builder()
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())

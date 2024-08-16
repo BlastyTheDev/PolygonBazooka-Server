@@ -1,7 +1,10 @@
 package me.blasty.polygonbazookaserver.api.multiplayer.ranked;
 
+import lombok.RequiredArgsConstructor;
 import me.blasty.polygonbazookaserver.api.multiplayer.util.Const;
+import me.blasty.polygonbazookaserver.api.security.jwt.JWTService;
 import me.blasty.polygonbazookaserver.api.security.user.User;
+import me.blasty.polygonbazookaserver.api.security.user.UserRepository;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -11,10 +14,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+@RequiredArgsConstructor
 public class RankedMatchHandler extends TextWebSocketHandler {
 
+    private final JWTService jwtService;
+    private final UserRepository userRepository;
+    
     private final List<WebSocketSession> sessions = new ArrayList<>();
     private final HashMap<WebSocketSession, User> users = new HashMap<>();
+    
+    private final List<User> usersInQueue = new ArrayList<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -25,7 +34,17 @@ public class RankedMatchHandler extends TextWebSocketHandler {
             return;
         }
         
-        // TODO: reject connection if user is already connected
+        // TODO: not tested
+        String token = cookies.split("token=")[1].split(";")[0];
+        String username = jwtService.getSubject(token);
+        User user = userRepository.findByUsername(username).orElse(null);
+        
+        if (user == null) {
+            session.close();
+            return;
+        }
+        
+        users.put(session, user);
         
         sessions.add(session);
     }
