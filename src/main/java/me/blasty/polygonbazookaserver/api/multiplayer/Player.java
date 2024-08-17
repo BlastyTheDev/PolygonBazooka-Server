@@ -3,6 +3,10 @@ package me.blasty.polygonbazookaserver.api.multiplayer;
 import lombok.Getter;
 import me.blasty.polygonbazookaserver.api.multiplayer.util.Const;
 import me.blasty.polygonbazookaserver.api.multiplayer.util.RNG;
+import me.blasty.polygonbazookaserver.api.multiplayer.util.Vector2;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 public class Player {
@@ -22,6 +26,10 @@ public class Player {
     private int xOrbit;
     private int yOrbit;
 
+    private long lastClear;
+
+    private volatile boolean toppedOut;
+
     public Player() {
         board = new TileType[Const.Rows][Const.Cols];
         resetBoard();
@@ -33,7 +41,44 @@ public class Player {
                 board[row][col] = TileType.Empty;
     }
 
+    public synchronized void dropPiece(boolean origin, int destY) {
+        if (destY < 0)
+            toppedOut = true;
+        else if (origin) {
+            board[destY][xOrigin] = fallingBlockOrigin;
+            fallingBlockOrigin = TileType.Empty;
+        } else {
+            board[destY][xOrbit] = fallingBlockOrbit;
+            fallingBlockOrbit = TileType.Empty;
+        }
+    }
+
+    public synchronized int getLowestEmptyCell(int col) {
+        for (int row = Const.Rows - 1; row >= 0; row--)
+            if (board[row][col] == TileType.Empty)
+                return row;
+
+        return -1;
+    }
+
     public synchronized void hardDrop() {
+        if (isClearing())
+            return;
+
+        // drop origin first if lower
+        // they are flipped and i have no idea why but it works so..
+        if (yOrigin <= yOrbit) {
+            if (fallingBlockOrbit != TileType.Empty)
+                dropPiece(false, getLowestEmptyCell(xOrbit));
+            if (fallingBlockOrigin != TileType.Empty)
+                dropPiece(true, getLowestEmptyCell(xOrigin));
+        } else {
+            if (fallingBlockOrigin != TileType.Empty)
+                dropPiece(true, getLowestEmptyCell(xOrigin));
+            if (fallingBlockOrbit != TileType.Empty)
+                dropPiece(false, getLowestEmptyCell(xOrigin));
+        }
+
         nextFallingBlock();
     }
 
@@ -54,9 +99,31 @@ public class Player {
     }
 
     public synchronized void moveLeft() {
+        if (isClearing())
+            return;
+
+        if (xOrigin - 1 < 0 || xOrbit - 1 < 0)
+            return;
+
+        if (isCellToLeftNotEmpty())
+            return;
+
+        xOrigin--;
+        xOrbit--;
     }
 
     public synchronized void moveRight() {
+        if (isClearing())
+            return;
+
+        if (xOrigin + 1 > Const.Cols - 1 || xOrbit + 1 > Const.Cols - 1)
+            return;
+
+        if (isCellToRightNotEmpty())
+            return;
+
+        xOrigin++;
+        xOrbit++;
     }
 
     private synchronized boolean isCellToLeftNotEmpty() {
@@ -196,16 +263,133 @@ public class Player {
         }
     }
 
-    public synchronized void moveFullyLeft() {
+    private synchronized boolean isClearing() {
+        return System.currentTimeMillis() - lastClear < Const.ClearTime;
     }
 
-    public synchronized void moveFullyRight() {
+    public synchronized void moveLeftFully() {
+        while (xOrigin - 1 >= 0 && xOrbit - 1 >= 0 && !isCellToLeftNotEmpty() && !isClearing()) {
+            xOrigin--;
+            xOrbit--;
+        }
     }
-    
+
+    public synchronized void moveRightFully() {
+        while (xOrigin + 1 <= Const.Cols - 1 && xOrbit + 1 <= Const.Cols - 1 && !isCellToRightNotEmpty() && !isClearing()) {
+            xOrigin++;
+            xOrbit++;
+        }
+    }
+
+    @SuppressWarnings("DuplicatedCode")
     public synchronized void clear() {
+        List<Vector2> clearedTiles = new ArrayList<>();
+
+        // clear horizontally
+        for (int row = 0; row < Const.Rows; row++) {
+            for (int col = 0; col < Const.Cols; col++) {
+                if (board[row][col] == TileType.Empty || board[row][col] == TileType.Bonus ||
+                        board[row][col] == TileType.Garbage)
+                    continue;
+
+                int matchLength = 1;
+                int lastColourMatch = col;
+                TileType current = board[row][col];
+
+                for (int nextCol = col + 1; nextCol < Const.Cols; nextCol++) {
+                    if (board[row][nextCol] == current || board[row][nextCol] == TileType.Bonus) {
+                        matchLength++;
+                        if (board[row][nextCol] == current)
+                            lastColourMatch = nextCol;
+                    } else
+                        break;
+                }
+
+                if (board[row][col + matchLength - 1] == TileType.Bonus)
+                    matchLength--;
+
+                if (matchLength >= 3 && lastColourMatch > col + 1) {
+                    for (int i = 0; i < matchLength; i++) {
+                        if (col + i <= lastColourMatch)
+                            clearedTiles.add(new Vector2(col + i, row));
+                    }
+                }
+            }
+        }
+
+        // clear vertically
+        for (int col = 0; col < Const.Cols; col++) {
+            for (int row = 0; row < Const.Rows; row++) {
+                if (board[row][col] == TileType.Empty || board[row][col] == TileType.Bonus ||
+                        board[row][col] == TileType.Garbage)
+                    continue;
+
+                int matchLength = 1;
+                int lastColourMatch = row;
+                TileType current = board[row][col];
+
+                for (int nextRow = row + 1; nextRow < Const.Rows; nextRow++) {
+                    if (board[nextRow][col] == current || board[nextRow][col] == TileType.Bonus) {
+                        matchLength++;
+                        if (board[nextRow][col] == current)
+                            lastColourMatch = nextRow;
+                    } else
+                        break;
+                }
+
+                if (board[row + matchLength - 1][col] == TileType.Bonus)
+                    matchLength--;
+
+                if (matchLength >= 3 && lastColourMatch > row + 1) {
+                    for (int i = 0; i < matchLength; i++) {
+                        if (row + i <= lastColourMatch)
+                            clearedTiles.add(new Vector2(col, row + i));
+                    }
+                }
+            }
+        }
+
+//        if (clearedTiles.Count != 0) {
+//            clearingTiles = new ArrayList<>();
+//            lastClear = System.currentTimeMillis();
+//        }
+
+        // clear tiles and adjacent garbage
+        for (Vector2 tile : clearedTiles) {
+            lastClear = System.currentTimeMillis();
+
+//            clearingTiles.Add(tile);
+            board[tile.Y][tile.X] = TileType.Empty;
+
+            // if tile below is garbage
+            if (tile.Y - 1 >= 0 && board[tile.Y - 1][tile.X] == TileType.Garbage)
+                board[tile.Y - 1][tile.X] = TileType.Empty;
+
+            // if tile above is garbage
+            if (tile.Y + 1 < Const.Rows && board[tile.Y + 1][tile.X] == TileType.Garbage)
+                board[tile.Y + 1][tile.X] = TileType.Empty;
+
+            // if tile to the left is garbage
+            if (tile.X - 1 >= 0 && board[tile.Y][tile.X - 1] == TileType.Garbage)
+                board[tile.Y][tile.X - 1] = TileType.Empty;
+
+            // if tile to the right is garbage
+            if (tile.X + 1 < Const.Cols && board[tile.Y][tile.X + 1] == TileType.Garbage)
+                board[tile.Y][tile.X + 1] = TileType.Empty;
+        }
     }
-    
+
     public synchronized void gravity() {
+        for (int col = 0; col < Const.Cols; col++) {
+            int bottomEmptyRow = Const.Rows - 1;
+
+            for (int row = Const.Rows - 1; row >= 0; row--)
+                if (board[row][col] != TileType.Empty)
+                    board[bottomEmptyRow--][col] = board[row][col];
+
+            for (int row = bottomEmptyRow; row >= 0; row--)
+                board[row][col] = TileType.Empty;
+        }
     }
 
 }

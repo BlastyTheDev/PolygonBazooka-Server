@@ -35,11 +35,13 @@ public class Const {
     public static final char RotateCcw = 'A';
     public static final char Flip = 'F';
     
-    public static final char MoveFullyLeft = 'L';
-    public static final char MoveFullyRight = 'R';
+    public static final char MoveLeftFully = 'L';
+    public static final char MoveRightFully = 'R';
     
     // Rotation
     public static final int Cw = -1;
     public static final int Ccw = 1;
+    
+    public static final int ClearTime = 400;
     
 }

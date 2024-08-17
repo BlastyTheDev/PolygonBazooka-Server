@@ -104,6 +104,11 @@ public class RankedMatchHandler extends TextWebSocketHandler {
 
         if (message.equals(Const.ForfeitGame)) {
         }
+        
+        if (message.startsWith(Const.ChatPrefix)) {
+            var chatMessage = message.substring(Const.ChatPrefix.length());
+            // broadcast if in match
+        }
     }
 
 }
