@@ -8,9 +8,12 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Getter
 public class RankedMatch {
+    
+    private final UUID matchId;
 
     private final Player player1;
     private final Player player2;
@@ -28,7 +31,9 @@ public class RankedMatch {
     
     private volatile RankedMatchState state;
 
-    public RankedMatch(User user, User player2, WebSocketSession session1, WebSocketSession session2) {
+    public RankedMatch(User user, User player2, WebSocketSession session1, WebSocketSession session2, UUID matchId) {
+        this.matchId = matchId;
+        
         player1 = new Player();
         this.player2 = new Player();
 
@@ -56,6 +61,11 @@ public class RankedMatch {
             case Const.MoveRight -> {
                 if (session == session1) player1.moveRight();
                 else player2.moveRight();
+            }
+            
+            case Const.MoveDown -> {
+//                if (session == session1) player1.moveDown();
+//                else player2.moveDown();
             }
 
             case Const.MoveLeftFully -> {

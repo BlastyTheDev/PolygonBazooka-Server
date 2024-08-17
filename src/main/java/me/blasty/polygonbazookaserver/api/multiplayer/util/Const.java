@@ -20,16 +20,21 @@ public class Const {
     };
 
     // Ranked Websocket Messages
+    public static final String MatchFound = "MATCHFOUND:";
     public static final String JoinQueue = "<JOINQUEUE>";
     public static final String LeaveQueue = "<LEAVEQUEUE>";
-
+    
     // Multiplayer Websocket Messages
+    public static final String ConnectionInitialized = "<INITIALIZED>";
+    public static final String ConnectionRejected = "<REJECTED>";
+    
     public static final String ForfeitGame = "<FORFEIT>";
     public static final String ChatPrefix = "MESSAGE:";
 
     public static final char MoveLeft = 'l';
     public static final char MoveRight = 'r';
     public static final char HardDrop = 'H';
+    public static final char MoveDown = 'D';
 
     public static final char RotateCw = 'C';
     public static final char RotateCcw = 'A';

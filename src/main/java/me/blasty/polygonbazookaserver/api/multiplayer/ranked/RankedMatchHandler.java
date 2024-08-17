@@ -14,6 +14,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 public class RankedMatchHandler extends TextWebSocketHandler {
@@ -23,16 +24,19 @@ public class RankedMatchHandler extends TextWebSocketHandler {
 
     private final List<WebSocketSession> sessions = new ArrayList<>();
     private final HashMap<User, WebSocketSession> users = new HashMap<>();
+    private final HashMap<User, UUID> usersInMatch = new HashMap<>();
 
     private final List<User> usersInQueue = new ArrayList<>();
     
     private final List<RankedMatch> matches = new ArrayList<>();
+    private final List<UUID> usedMatchIds = new ArrayList<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String cookies = String.valueOf(session.getHandshakeHeaders().get("Cookie"));
 
         if (cookies == null || !cookies.contains("token")) {
+            session.sendMessage(new TextMessage(Const.ConnectionRejected));
             session.close();
             return;
         }
@@ -42,11 +46,13 @@ public class RankedMatchHandler extends TextWebSocketHandler {
         User user = userRepository.findByUsername(username).orElse(null);
 
         if (user == null) {
+            session.sendMessage(new TextMessage(Const.ConnectionRejected));
             session.close();
             return;
         }
 
         if (users.get(user) != null) {
+            session.sendMessage(new TextMessage(Const.ConnectionRejected));
             session.close();
             return;
         }
@@ -54,6 +60,8 @@ public class RankedMatchHandler extends TextWebSocketHandler {
         users.put(user, session);
 
         sessions.add(session);
+        
+        session.sendMessage(new TextMessage(Const.ConnectionInitialized));
     }
 
     @Override
@@ -73,6 +81,8 @@ public class RankedMatchHandler extends TextWebSocketHandler {
         
         String message = msg.getPayload();
 
+        System.out.println("received: " + message);
+
         if (message.equals(Const.JoinQueue)) {
             usersInQueue.add(user);
             
@@ -87,27 +97,43 @@ public class RankedMatchHandler extends TextWebSocketHandler {
                     player2 = usersInQueue.get(RNG.next(usersInQueue.size() - 1));
                 }
                 
-                var session1 = users.get(user);
                 var session2 = users.get(player2);
                 
-                var match = new RankedMatch(user, player2, session1, session2);
-                // TODO: send players a match id to reroute socket traffic to the match
+                UUID matchId = null;
+                
+                while (matchId == null || usedMatchIds.contains(matchId))
+                    matchId = UUID.randomUUID();
+                
+                usedMatchIds.add(matchId);
+                
+                var match = new RankedMatch(user, player2, session, session2, matchId);
+                matches.add(match);
+                
+                session.sendMessage(new TextMessage(Const.MatchFound + matchId));
+                session2.sendMessage(new TextMessage(Const.MatchFound + matchId));
                 
                 usersInQueue.remove(user);
                 usersInQueue.remove(player2);
             }
+            
+            return;
         }
 
         if (message.equals(Const.LeaveQueue)) {
             usersInQueue.remove(user);
+            
+            return;
         }
 
         if (message.equals(Const.ForfeitGame)) {
+            return;
         }
         
         if (message.startsWith(Const.ChatPrefix)) {
             var chatMessage = message.substring(Const.ChatPrefix.length());
             // broadcast if in match
+            
+            return;
         }
     }
 
