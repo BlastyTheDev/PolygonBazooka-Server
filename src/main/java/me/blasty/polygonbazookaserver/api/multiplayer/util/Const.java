@@ -27,4 +27,19 @@ public class Const {
     public static final String ForfeitGame = "<FORFEIT>";
     public static final String ChatPrefix = "MESSAGE:";
 
+    public static final char MoveLeft = 'l';
+    public static final char MoveRight = 'r';
+    public static final char HardDrop = 'H';
+
+    public static final char RotateCw = 'C';
+    public static final char RotateCcw = 'A';
+    public static final char Flip = 'F';
+    
+    public static final char MoveFullyLeft = 'L';
+    public static final char MoveFullyRight = 'R';
+    
+    // Rotation
+    public static final int Cw = -1;
+    public static final int Ccw = 1;
+    
 }
