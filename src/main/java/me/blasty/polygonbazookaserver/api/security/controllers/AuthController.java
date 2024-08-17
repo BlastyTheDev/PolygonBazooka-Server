@@ -8,6 +8,7 @@ import me.blasty.polygonbazookaserver.api.security.RegisterRequest;
 import me.blasty.polygonbazookaserver.api.security.jwt.JWTService;
 import me.blasty.polygonbazookaserver.api.security.user.User;
 import me.blasty.polygonbazookaserver.api.security.user.UserRepository;
+import me.blasty.polygonbazookaserver.util.Glicko2;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -53,6 +54,9 @@ public class AuthController {
                 .email(registerRequest.getEmail())
                 .created(new Date(System.currentTimeMillis()))
                 .timePlayed(0L)
+                .glicko(Glicko2.UNRANKED_GLICKO)
+                .rd(Glicko2.UNRANKED_RD)
+                .volatility(Glicko2.UNRANKED_VOLATILITY)
                 .build();
 
         userRepository.save(user);
