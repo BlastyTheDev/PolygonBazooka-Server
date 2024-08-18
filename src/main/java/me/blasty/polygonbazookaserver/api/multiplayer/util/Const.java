@@ -28,6 +28,8 @@ public class Const {
     public static final String ConnectionInitialized = "<INITIALIZED>";
     public static final String ConnectionRejected = "<REJECTED>";
     
+    public static final String RequestDisconnect = "<DISCONNECT>";
+    
     public static final String ForfeitGame = "<FORFEIT>";
     public static final String ChatPrefix = "MESSAGE:";
 
